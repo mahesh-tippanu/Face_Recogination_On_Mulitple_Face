@@ -1,0 +1,6 @@
+# Ignore large dataset folders
+venv/
+IFW/
+celeba/
+Face Mask Detection/
+data_processed/
