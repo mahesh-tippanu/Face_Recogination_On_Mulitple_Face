@@ -12,6 +12,7 @@ TRAIN_RATIO = 0.70
 VAL_RATIO   = 0.15
 TEST_RATIO  = 0.15
 
+# 🔒 FIXED SEED — SPLITS CREATED ONCE AND LOCKED
 RANDOM_SEED = 42
 # ========================================
 
@@ -70,9 +71,9 @@ else:
     print("[INFO] New identity splits created and LOCKED.")
 
 # ---------------- SANITY CHECK (MANDATORY) ----------------
-assert len(train) > 0
-assert len(val) > 0
-assert len(test) > 0
+assert len(train) > 0, "Train split empty!"
+assert len(val) > 0, "Validation split empty!"
+assert len(test) > 0, "Test split empty!"
 
 assert len(set(train) & set(val)) == 0, "Train/Val identity leakage!"
 assert len(set(train) & set(test)) == 0, "Train/Test identity leakage!"

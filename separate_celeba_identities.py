@@ -2,6 +2,7 @@ import os
 import shutil
 from collections import defaultdict
 import json
+import sys
 
 # ================= CONFIG =================
 PROJECT_ROOT = r"D:\Face recogination project"
@@ -29,7 +30,7 @@ if os.path.exists(META_FILE):
     with open(META_FILE) as f:
         meta = json.load(f)
     print(f"[INFO] Loaded metadata: {meta}")
-    exit(0)
+    sys.exit(0)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

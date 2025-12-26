@@ -2,6 +2,15 @@ import os
 import random
 from collections import defaultdict
 import json
+import argparse
+
+# ================= ARGUMENTS =================
+parser = argparse.ArgumentParser(description="Create federated client splits")
+parser.add_argument("--seed", type=int, default=42, help="Random seed")
+args = parser.parse_args()
+
+BASE_SEED = args.seed
+# =============================================
 
 # ================= CONFIG =================
 PROJECT_ROOT = r"D:\Face recogination project"
@@ -12,7 +21,6 @@ CELEBA_DIR = os.path.join(BASE_DIR, "celeba_identities")
 OUTPUT_DIR = os.path.join(BASE_DIR, "federated")
 
 CLIENT_SETTINGS = [10, 20, 50]
-RANDOM_SEED = 42
 
 MIN_IDS_PER_CLIENT = 50
 MAX_IDS_PER_CLIENT = 150
@@ -25,8 +33,9 @@ with open(TRAIN_IDS_FILE, "r") as f:
 celeba_folders = set(os.listdir(CELEBA_DIR))
 train_ids_master = sorted([i for i in raw_ids if i in celeba_folders])
 
-print(f"Total train IDs (raw)  : {len(raw_ids)}")
-print(f"Total train IDs (valid): {len(train_ids_master)}")
+print(f"Base random seed      : {BASE_SEED}")
+print(f"Total train IDs (raw) : {len(raw_ids)}")
+print(f"Total train IDs(valid): {len(train_ids_master)}")
 
 if len(train_ids_master) == 0:
     raise RuntimeError("No valid identities found in celeba_identities!")
@@ -35,8 +44,9 @@ if len(train_ids_master) == 0:
 for num_clients in CLIENT_SETTINGS:
     print(f"\nCreating {num_clients} federated clients...")
 
-    # 🔒 RESET RNG FOR EACH SETTING (REPRODUCIBLE & FAIR)
-    rng = random.Random(RANDOM_SEED + num_clients)
+    # 🔒 FAIR + REPRODUCIBLE SEEDING
+    rng = random.Random(BASE_SEED + num_clients)
+
     train_ids = train_ids_master.copy()
     rng.shuffle(train_ids)
 
@@ -88,7 +98,8 @@ for num_clients in CLIENT_SETTINGS:
     # ---------------- SAVE METADATA ----------------
     meta = {
         "num_clients": num_clients,
-        "random_seed": RANDOM_SEED + num_clients,
+        "base_seed": BASE_SEED,
+        "effective_seed": BASE_SEED + num_clients,
         "min_ids_per_client": MIN_IDS_PER_CLIENT,
         "max_ids_per_client": MAX_IDS_PER_CLIENT,
         "total_train_ids": len(train_ids_master),

@@ -12,6 +12,7 @@ TRAIN_RATIO = 0.70
 VAL_RATIO   = 0.15
 TEST_RATIO  = 0.15
 
+# 🔒 Fixed seed — splits created ONCE and reused
 RANDOM_SEED = 42
 # ========================================
 
@@ -25,7 +26,7 @@ test_file  = os.path.join(SPLITS_DIR, "test_ids.txt")
 # IF SPLITS EXIST → LOAD (DO NOT RE-SHUFFLE)
 # -------------------------------------------------
 if all(os.path.exists(f) for f in [train_file, val_file, test_file]):
-    print("[INFO] Existing identity splits found. Loading (REPRODUCIBLE).")
+    print("[INFO] Existing identity splits found. Loading (LOCKED).")
 
     with open(train_file) as f:
         train_ids = [l.strip() for l in f if l.strip()]
@@ -46,7 +47,7 @@ else:
     if len(ids) == 0:
         raise RuntimeError("No identity folders found in celeba_identities!")
 
-    # ---------------- SHUFFLE (ONCE) ----------------
+    # ---------------- SHUFFLE (ONCE ONLY) ----------------
     random.seed(RANDOM_SEED)
     random.shuffle(ids)
 
@@ -69,14 +70,16 @@ else:
 
     print("[INFO] New identity splits created and LOCKED.")
 
-# ---------------- SANITY CHECK ----------------
-assert len(train_ids) > 0
-assert len(val_ids) > 0
-assert len(test_ids) > 0
-assert len(set(train_ids) & set(val_ids)) == 0
-assert len(set(train_ids) & set(test_ids)) == 0
-assert len(set(val_ids) & set(test_ids)) == 0
+# ---------------- SANITY CHECK (MANDATORY) ----------------
+assert len(train_ids) > 0, "Train split empty!"
+assert len(val_ids) > 0, "Validation split empty!"
+assert len(test_ids) > 0, "Test split empty!"
 
+assert len(set(train_ids) & set(val_ids)) == 0, "Train/Val identity leakage!"
+assert len(set(train_ids) & set(test_ids)) == 0, "Train/Test identity leakage!"
+assert len(set(val_ids) & set(test_ids)) == 0, "Val/Test identity leakage!"
+
+# ---------------- SUMMARY ----------------
 print("\nSplit summary (IDENTITY-DISJOINT):")
 print(f"  Train: {len(train_ids)} identities")
 print(f"  Val  : {len(val_ids)} identities")

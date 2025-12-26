@@ -6,7 +6,7 @@ import torch
 from torchvision import models, transforms
 import matplotlib.pyplot as plt
 
-# ---------------- CONFIG ----------------
+# ================= CONFIG =================
 PROJECT_ROOT = r"D:\Face recogination project"
 BASE_DIR = os.path.join(PROJECT_ROOT, "data_processed")
 
@@ -15,6 +15,10 @@ NORMAL_DIR = os.path.join(BASE_DIR, "attack_dataset", "NormalPairs")
 
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "results")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# ----- ABLATION SWITCH -----
+SCORE_MODE = "max"   # "max" (ours) or "mean"
+# ==========================
 
 # ---------------- DEVICE ----------------
 device = "cpu"
@@ -70,7 +74,10 @@ def compute_identity_score(identity_dir):
 
     distances = 1.0 - np.dot(embeddings, center)
 
-    # Max cosine distance = multi-face violation signal
+    if SCORE_MODE == "mean":
+        return distances.mean()
+
+    # default: max
     return distances.max()
 
 # ---------------- COLLECT SAMPLES ----------------
@@ -128,7 +135,7 @@ plt.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}", linewidth=2)
 plt.plot([0, 1], [0, 1], "k--", linewidth=1)
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
-plt.title("ROC: Multi-Face Registration Attack Detection")
+plt.title(f"ROC ({SCORE_MODE} cosine distance)")
 plt.legend(loc="lower right")
 plt.grid(True)
 
@@ -142,6 +149,7 @@ def tpr_at_fpr(target_fpr):
     return tpr[idx[-1]] if len(idx) else 0.0
 
 print("\n========== RESULTS ==========")
+print(f"SCORE_MODE        : {SCORE_MODE}")
 print(f"ROC-AUC          : {roc_auc:.4f}")
 print(f"TPR @ FPR = 1%   : {tpr_at_fpr(0.01):.4f}")
 print(f"TPR @ FPR = 0.1% : {tpr_at_fpr(0.001):.4f}")
@@ -153,25 +161,12 @@ attack_scores = y_score[y_true == 1]
 
 plt.figure(figsize=(7, 5), dpi=300)
 
-plt.hist(
-    normal_scores,
-    bins=50,
-    density=True,
-    alpha=0.6,
-    label="Normal Registrations"
-)
+plt.hist(normal_scores, bins=50, density=True, alpha=0.6, label="Normal")
+plt.hist(attack_scores, bins=50, density=True, alpha=0.7, label="Attack")
 
-plt.hist(
-    attack_scores,
-    bins=50,
-    density=True,
-    alpha=0.7,
-    label="Multi-Face Attacks"
-)
-
-plt.xlabel("Anomaly Score (Max Cosine Distance)")
+plt.xlabel("Anomaly Score (Cosine Distance)")
 plt.ylabel("Density")
-plt.title("Score Distribution: Normal vs Multi-Face Registration Attacks")
+plt.title(f"Score Distribution ({SCORE_MODE} cosine distance)")
 plt.legend()
 plt.grid(True)
 

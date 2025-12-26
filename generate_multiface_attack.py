@@ -2,8 +2,25 @@ import os
 import random
 import shutil
 import json
+import argparse
 
-# ========= CONFIG =========
+# ================= ARGUMENTS =================
+parser = argparse.ArgumentParser(
+    description="Generate multi-face registration attacks"
+)
+parser.add_argument(
+    "--seed",
+    type=int,
+    default=42,
+    help="Random seed for reproducibility"
+)
+args = parser.parse_args()
+
+RANDOM_SEED = args.seed
+random.seed(RANDOM_SEED)
+# ============================================
+
+# ================= CONFIG ====================
 PROJECT_ROOT = r"D:\Face recogination project"
 
 BASE_DIR = os.path.join(PROJECT_ROOT, "data_processed")
@@ -11,27 +28,34 @@ CELEBA_DIR = os.path.join(BASE_DIR, "celeba_identities")
 FEDERATED_DIR = os.path.join(BASE_DIR, "federated", "clients_20")
 OUTPUT_DIR = os.path.join(BASE_DIR, "attack_dataset")
 
-ATTACK_FRACTION = 0.25              # ↑ more malicious clients
+ATTACK_FRACTION = 0.25              # 25% malicious clients
 IMAGES_PER_ID = 3
-NUM_ATTACK_IDS_PER_CLIENT = 10      # ↑ key fix (10–20 is realistic)
+NUM_ATTACK_IDS_PER_CLIENT = 10      # realistic (10–20)
 DONORS_PER_ATTACK = 2
-RANDOM_SEED = 42
-# ==========================
+# ============================================
 
-random.seed(RANDOM_SEED)
-
+# ---------------- OUTPUT DIRS ----------------
 NORMAL_DIR = os.path.join(OUTPUT_DIR, "NormalPairs")
 ATTACK_DIR = os.path.join(OUTPUT_DIR, "AttackPairs")
 os.makedirs(NORMAL_DIR, exist_ok=True)
 os.makedirs(ATTACK_DIR, exist_ok=True)
 
-clients = sorted(os.listdir(FEDERATED_DIR))
+# ---------------- LOAD CLIENT FILES ----------------
+clients = sorted([
+    f for f in os.listdir(FEDERATED_DIR)
+    if f.endswith(".txt")
+])
+
 num_clients = len(clients)
+assert num_clients > 0, "No client files found!"
 
 num_attack_clients = max(1, int(num_clients * ATTACK_FRACTION))
-malicious_clients = sorted(random.sample(clients, num_attack_clients))
+malicious_clients = sorted(
+    random.sample(clients, num_attack_clients)
+)
 
-print(f"Total clients: {num_clients}")
+print(f"Random seed          : {RANDOM_SEED}")
+print(f"Total clients        : {num_clients}")
 print(f"Malicious clients ({num_attack_clients}): {malicious_clients}")
 
 # ---------------- METADATA ----------------
@@ -64,9 +88,7 @@ for client in clients:
 
     client_name = client.replace(".txt", "")
 
-    # ============================================================
-    # ===================== ATTACK CLIENT ========================
-    # ============================================================
+    # ===================== ATTACK CLIENT =====================
     if client in malicious_clients:
         out_client = os.path.join(ATTACK_DIR, client_name)
         os.makedirs(out_client, exist_ok=True)
@@ -86,8 +108,12 @@ for client in clients:
             os.makedirs(tgt_dir, exist_ok=True)
 
             # ----- target images -----
-            tgt_imgs = os.listdir(os.path.join(CELEBA_DIR, target_id))
-            for img in random.sample(tgt_imgs, min(IMAGES_PER_ID, len(tgt_imgs))):
+            tgt_imgs = os.listdir(
+                os.path.join(CELEBA_DIR, target_id)
+            )
+            for img in random.sample(
+                tgt_imgs, min(IMAGES_PER_ID, len(tgt_imgs))
+            ):
                 shutil.copy(
                     os.path.join(CELEBA_DIR, target_id, img),
                     os.path.join(tgt_dir, img)
@@ -95,11 +121,18 @@ for client in clients:
 
             # ----- donor injections -----
             for donor in donors:
-                donor_imgs = os.listdir(os.path.join(CELEBA_DIR, donor))
-                for img in random.sample(donor_imgs, min(IMAGES_PER_ID, len(donor_imgs))):
+                donor_imgs = os.listdir(
+                    os.path.join(CELEBA_DIR, donor)
+                )
+                for img in random.sample(
+                    donor_imgs, min(IMAGES_PER_ID, len(donor_imgs))
+                ):
                     shutil.copy(
                         os.path.join(CELEBA_DIR, donor, img),
-                        os.path.join(tgt_dir, f"attack_{donor}_{img}")
+                        os.path.join(
+                            tgt_dir,
+                            f"attack_{donor}_{img}"
+                        )
                     )
 
             attack_metadata["clients"].append({
@@ -109,9 +142,7 @@ for client in clients:
                 "donor_identities": donors
             })
 
-    # ============================================================
-    # ===================== NORMAL CLIENT ========================
-    # ============================================================
+    # ===================== NORMAL CLIENT =====================
     else:
         out_client = os.path.join(NORMAL_DIR, client_name)
         os.makedirs(out_client, exist_ok=True)
@@ -120,8 +151,12 @@ for client in clients:
             id_dir = os.path.join(out_client, identity)
             os.makedirs(id_dir, exist_ok=True)
 
-            imgs = os.listdir(os.path.join(CELEBA_DIR, identity))
-            for img in random.sample(imgs, min(IMAGES_PER_ID, len(imgs))):
+            imgs = os.listdir(
+                os.path.join(CELEBA_DIR, identity)
+            )
+            for img in random.sample(
+                imgs, min(IMAGES_PER_ID, len(imgs))
+            ):
                 shutil.copy(
                     os.path.join(CELEBA_DIR, identity, img),
                     os.path.join(id_dir, img)
@@ -133,13 +168,12 @@ for client in clients:
         })
 
 # ---------------- SAVE METADATA ----------------
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-attack_meta_path = os.path.join(OUTPUT_DIR, "attack_metadata.json")
-
+attack_meta_path = os.path.join(
+    OUTPUT_DIR, "attack_metadata.json"
+)
 with open(attack_meta_path, "w") as f:
     json.dump(attack_metadata, f, indent=2)
 
-print(f"\n[INFO] attack_metadata.json saved to:")
+print("\n[INFO] attack_metadata.json saved to:")
 print(attack_meta_path)
-
 print("\nMulti-face registration attack generation COMPLETE.")
